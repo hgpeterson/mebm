@@ -1,0 +1,60 @@
+lines.linewidth:       1.0
+lines.markeredgewidth: 1.0
+lines.markersize:      4.0
+
+hatch.linewidth:       0.5
+
+font.size:             7.0
+mathtext.cal:          sans
+mathtext.it:           sans: italic
+# font.family:           serif
+# font.serif:            STIXGeneral
+# mathtext.fontset:      stix
+font.family:           sans-serif
+font.sans-serif:       TeX Gyre Heros
+# font.sans-serif:       Verdana
+
+axes.linewidth:        0.5
+# axes.grid:             True
+axes.grid:             False
+axes.labelpad:         4.0
+axes.axisbelow:        False
+axes.xmargin:          0
+# axes.xmargin:        0.01
+axes.ymargin:          0.01
+
+xtick.bottom:          True
+xtick.major.size:      3.5
+xtick.minor.size:      2
+xtick.major.width:     0.5
+xtick.minor.width:     0.5
+xtick.direction:       in
+xtick.minor.visible:   False
+
+ytick.left:            True
+ytick.major.size:      3.5
+ytick.minor.size:      2
+ytick.major.width:     0.5
+ytick.minor.width:     0.5
+ytick.direction:       in
+ytick.minor.visible:   False
+
+grid.color:            0.7
+grid.linewidth:        0.5
+grid.linestyle:        --
+
+legend.frameon:        false
+
+# figure.figsize:        4, 2.47
+figure.figsize:        3.404, 2.101
+
+figure.subplot.left:   0.1
+figure.subplot.right:  0.9
+figure.subplot.bottom: 0.1
+figure.subplot.top:    0.9
+
+
+savefig.format:      pdf
+savefig.dpi: 		 500
+# savefig.transparent: True
+savefig.transparent:   False

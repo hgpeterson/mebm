@@ -1,0 +1,4 @@
+include mebm/plot_styles.mplstyle
+include mebm/data/ctrl.npz
+include mebm/data/moist_adiabat_data.npz
+include mebm/data/D_cesm2.npz
