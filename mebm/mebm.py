@@ -809,12 +809,11 @@ class MoistEnergyBalanceModel():
         return trans
 
 
-    def log_feedbacks(self, fname_feedbacks):
+    def calculate_feedbacks(self):
         """
-        Calculate each feedback transport and log data on the shifts.
+        Calculate each feedback transport.
 
         INPUTS
-            fname_feedbacks: string -> file to write to.
 
         OUTPUTS
             Creates arrays for each feedback transport saved to class.
