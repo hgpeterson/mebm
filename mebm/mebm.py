@@ -34,7 +34,7 @@ class MoistEnergyBalanceModel():
     """
     Diffusive moist energy balance model.
     """
-    def __init__(self, N_pts=401, max_iters=1000, tol=1e-8, diffusivity="constant", control_file=package_path+"/data/ctrl.npz"):
+    def __init__(self, N_pts=401, max_iters=1000, tol=1e-8, diffusivity="constant", control_file="default"):
         # Setup grid
         self.N_pts = N_pts
         self.dx = 2 / (N_pts - 1)
@@ -76,6 +76,8 @@ class MoistEnergyBalanceModel():
                 Diff =  D_trop * np.ones(lats.shape)
                 Diff[np.where(np.logical_or(np.rad2deg(lats) <= -lat0, np.rad2deg(lats) > lat0))] = D_extrop
                 return Diff
+        else:
+            os.sys.exit("Unsupported D type.")
 
         self.D = D_f(self.lats)
 
@@ -90,7 +92,7 @@ class MoistEnergyBalanceModel():
         self.max_iters = max_iters
 
         # Datasets for numpy search sorted
-        self.T_dataset = np.arange(50, 350, 1e-3)
+        self.T_dataset = np.arange(100, 400, 1e-3)
         self.q_dataset = self._humidsat(self.T_dataset, ps/100)[1]
         self.E_dataset = cp*self.T_dataset + RH*self.q_dataset*Lv
 
@@ -99,6 +101,8 @@ class MoistEnergyBalanceModel():
 
         # Control data
         self.control_file = control_file
+        if self.control_file == "default":
+            self.control_file = package_path + "/data/ctrl.npz"
         self.ctrl_data = np.load(self.control_file)
 
 
@@ -377,7 +381,8 @@ class MoistEnergyBalanceModel():
 
             # # Save RH dists for plotting:
             # np.savez("RH_M0_mebm.npz", RH=self.RH_dist, lats=self.lats, pressures=pressures)
-            # np.savez("RH_M18_mebm.npz", RH=self.generate_RH_dist(np.deg2rad(-10.74)), lats=self.lats, pressures=pressures)
+            # np.savez("RH_shifted_mebm.npz", RH=self.generate_RH_dist(np.deg2rad(-10.74)), lats=self.lats, pressures=pressures)
+            # np.savez("RH_M18_mebm.npz", RH=self.generate_RH_dist(np.deg2rad(-15.15)), lats=self.lats, pressures=pressures)
             # os.sys.exit()
 
             # # Debug: Plot RH dist
@@ -478,23 +483,6 @@ class MoistEnergyBalanceModel():
 
         N = self.Ns[grid_num]
 
-        # diag = np.zeros(N)
-        # for i in range(1, N-1):
-        #     diag[i] = -(C_mids[i] + C_mids[i-1])
-        # diag[0] = C_mids[0]
-        # diag[N-1] = C_mids[-1]
-        # upper_diag = C_mids
-        # upper_diag[0] =  -(C_mids[1] + C_mids[0])
-        # lower_diag = C_mids
-        # lower_diag[-1] =  -(C_mids[-1] + C_mids[-2])
-        # upper_upper_diag = np.zeros(N-2)
-        # upper_upper_diag[0] = C_mids[1]
-        # lower_lower_diag = np.zeros(N-2)
-        # lower_lower_diag[-1] = C_mids[-2]
-        # D = sp.sparse.diags(diag, 0)
-        # L = sp.sparse.diags(upper_diag, 1) + sp.sparse.diags(upper_upper_diag, 2)
-        # U = sp.sparse.diags(lower_diag, -1) + sp.sparse.diags(lower_lower_diag, -2)
-
         diag = np.zeros(N)
         for i in range(1, N-1):
             diag[i] = -(C_mids[i] + C_mids[i-1])
@@ -565,9 +553,7 @@ class MoistEnergyBalanceModel():
         self.numerical_method = numerical_method
         
         if numerical_method == "multigrid":
-            # self.grid_nums = range(np.max([int(np.log2(self.N_pts)), 2]))
             self.grid_nums = range(np.min([int(np.log2(self.N_pts)), 6]))
-            # self.grid_nums = range(4)
             self.Ns = [self.N_pts]
             for grid_num in range(1, len(self.grid_nums)):
                 self.Ns.append(self.N_pts//(2**grid_num) + 1)
@@ -631,7 +617,8 @@ class MoistEnergyBalanceModel():
                 L_array[frame, :] = self.L(self.T)
                 alb_array[frame, :] = self.alb
 
-                error = np.sqrt(self._area_weighted_avg((T_array[frame, :]-T_array[frame-1, :])**2))
+                # error = np.sqrt(self._area_weighted_avg((T_array[frame, :] - T_array[frame-1, :])**2))
+                error = self._area_weighted_avg(np.abs(T_array[frame, :] - T_array[frame-1, :]))
 
                 # Print progress 
                 T_avg = self._area_weighted_avg(self.T)
@@ -822,68 +809,6 @@ class MoistEnergyBalanceModel():
         return trans
 
 
-    # def _calculate_shift(self):
-    #     """
-    #     Calculate approximations of shift in ITCZ using corrent simulation and control values.
-
-    #     INPUTS
-
-    #     OUTPUTS
-    #     """
-    #     I_equator = self.N_pts//2 
-
-    #     # Method 1: Do the basic Taylor approx
-    #     spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.trans_total, k=4, s=0)
-    #     trans_total_der = spl.derivative()(0)
-
-    #     numerator = self.trans_total[I_equator]
-    #     denominator = trans_total_der
-    #     shift = -np.rad2deg(np.arcsin(numerator / denominator))
-    #     print("Simple Taylor Shift: {:2.2f}".format(shift))
-
-    #     # Method 2: Use feedbacks relative to control
-    #     spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.trans_total_ctrl, k=4, s=0)
-    #     trans_total_ctrl_der = spl.derivative()(0)
-    #     spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.dtrans_dS, k=4, s=0)
-    #     dtrans_dS_der = spl.derivative()(0)
-    #     spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.dtrans_pl, k=4, s=0)
-    #     dtrans_pl_der = spl.derivative()(0)
-    #     spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.dtrans_wv, k=4, s=0)
-    #     dtrans_wv_der = spl.derivative()(0)
-    #     spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.dtrans_lr, k=4, s=0)
-    #     dtrans_lr_der = spl.derivative()(0)
-    #     spl = sp.interpolate.UnivariateSpline(self.sin_lats, self.dtrans_al, k=4, s=0)
-    #     dtrans_al_der = spl.derivative()(0)
-
-    #     numerator = self.trans_total_ctrl[I_equator] + self.dtrans_dS[I_equator] + self.dtrans_pl[I_equator] + self.dtrans_wv[I_equator] + self.dtrans_lr[I_equator] + self.dtrans_al[I_equator]
-    #     denominator = trans_total_ctrl_der + dtrans_dS_der + dtrans_pl_der + dtrans_wv_der + dtrans_lr_der + dtrans_al_der 
-    #     shift0 = -np.rad2deg(np.arcsin(numerator / denominator))
-    #     print("Shift with Feedbacks: {:2.2f}".format(shift0))
-        
-        
-    #     weird_int = self._calculate_trans(1/self._integrate_lat(1)*self._integrate_lat(self.dS*(1-self.alb_f) - self.S_ctrl*(self.alb_f - self.alb_ctrl))- (self.L_bar - self.L_bar_ctrl))
-    #     spl = sp.interpolate.UnivariateSpline(self.sin_lats, weird_int, k=4, s=0)
-    #     weird_int_der = spl.derivative()(0)
-    #     shift = -np.rad2deg(np.arcsin((numerator + weird_int[I_equator]) / (denominator + weird_int_der)))
-    #     percent = 100 * (shift0 - shift) / shift0
-    #     print("With Weird Integral: {:2.2f} ({:3.1f}%)".format(shift, percent))
-
-    #     shift = -np.rad2deg(np.arcsin((numerator - self.dtrans_pl[I_equator]) / (denominator - dtrans_pl_der)))
-    #     percent = 100 * (shift0 - shift) / shift0
-    #     print("No PL: {:2.2f} ({:3.1f}%)".format(shift, percent))
-    #     shift = -np.rad2deg(np.arcsin((numerator - self.dtrans_wv[I_equator]) / (denominator - dtrans_wv_der)))
-    #     percent = 100 * (shift0 - shift) / shift0
-    #     print("No WV: {:2.2f} ({:3.1f}%)".format(shift, percent))
-    #     shift = -np.rad2deg(np.arcsin((numerator - self.dtrans_lr[I_equator]) / (denominator - dtrans_lr_der)))
-    #     percent = 100 * (shift0 - shift) / shift0
-    #     print("No LR: {:2.2f} ({:3.1f}%)".format(shift, percent))
-    #     shift = -np.rad2deg(np.arcsin((numerator - self.dtrans_al[I_equator]) / (denominator - dtrans_al_der)))
-    #     percent = 100 * (shift0 - shift) / shift0
-    #     print("No AL: {:2.2f} ({:3.1f}%)".format(shift, percent))
-
-    #     # print("\t- {:1.2E} / {:1.2E}".format(numerator, denominator))
-
-
     def log_feedbacks(self, fname_feedbacks):
         """
         Calculate each feedback transport and log data on the shifts.
@@ -952,19 +877,19 @@ class MoistEnergyBalanceModel():
             ## Water Vapor 
             self.state["air_temperature"].values[:] = pert_state_temp
             self.state["surface_temperature"].values[:] = pert_state_temp[0, :, :]
-            # self.state["specific_humidity"].values[:] = ctrl_state_q
-            self.state["specific_humidity"].values[:] = pert_state_RH_dist * ctrl_state_qstar
+            self.state["specific_humidity"].values[:] = ctrl_state_q
+            # self.state["specific_humidity"].values[:] = pert_state_RH_dist * ctrl_state_qstar
             tendencies, diagnostics = self.longwave_radiation(self.state)
             self.dL_wv =  (self.L_f - diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0])
             self.dtrans_wv = self._calculate_trans(self.dL_wv, force_zero=True)
 
-            ## Relative Humidity
-            self.state["air_temperature"].values[:] = pert_state_temp
-            self.state["surface_temperature"].values[:] = pert_state_temp[0, :, :]
-            self.state["specific_humidity"].values[:] = ctrl_state_RH_dist * pert_state_qstar
-            tendencies, diagnostics = self.longwave_radiation(self.state)
-            self.dL_rh =  (self.L_f - diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0])
-            self.dtrans_rh = self._calculate_trans(self.dL_rh, force_zero=True)
+            # ## Relative Humidity
+            # self.state["air_temperature"].values[:] = pert_state_temp
+            # self.state["surface_temperature"].values[:] = pert_state_temp[0, :, :]
+            # self.state["specific_humidity"].values[:] = ctrl_state_RH_dist * pert_state_qstar
+            # tendencies, diagnostics = self.longwave_radiation(self.state)
+            # self.dL_rh =  (self.L_f - diagnostics["upwelling_longwave_flux_in_air_assuming_clear_sky"].values[-1, :, 0])
+            # self.dtrans_rh = self._calculate_trans(self.dL_rh, force_zero=True)
             
             ## Lapse Rate
             Tgrid_diff = np.repeat(pert_state_temp[0, :, 0] - ctrl_state_temp[0, :, 0], self.N_levels).reshape((self.N_pts, self.N_levels)).T.reshape((self.N_levels, self.N_pts, 1))
@@ -1034,7 +959,7 @@ class MoistEnergyBalanceModel():
         
         f, ax = plt.subplots(1)
         ax.plot(self.sin_lats, self.E_f / 1000, "c")
-        ax.plot([np.sin(self.EFE), np.sin(self.EFE)], [0, np.max(self.E_f)/1000], "r", label="EFE $\\approx {:.2f}^\\circ$".format(np.rad2deg(self.EFE)))
+        ax.plot([np.sin(self.EFE), np.sin(self.EFE)], [0, np.max(self.E_f)/1000], "r", label="EFE $\\approx {:.2f}$°".format(np.rad2deg(self.EFE)))
         ax.set_title("Final Energy")
         ax.set_xlabel("Latitude")
         ax.set_ylabel("MSE (kJ kg$^{-1}$)")
@@ -1058,7 +983,7 @@ class MoistEnergyBalanceModel():
 
         f, ax = plt.subplots(1)
         ax.plot(self.sin_lats, dE, "c")
-        ax.plot([np.sin(self.EFE), np.sin(self.EFE)], [np.min(dE) - 100, np.max(dE) + 100], "r", label="EFE $\\approx$ {:.2f}$^\\circ$".format(np.rad2deg(self.EFE)))
+        ax.plot([np.sin(self.EFE), np.sin(self.EFE)], [np.min(dE) - 100, np.max(dE) + 100], "r", label="EFE $\\approx {:.2f}$°".format(np.rad2deg(self.EFE)))
         ax.set_title("Final Energy Anomaly")
         ax.set_xlabel("Latitude")
         ax.set_ylabel("MSE (kJ kg$^{-1}$)")
@@ -1119,9 +1044,10 @@ class MoistEnergyBalanceModel():
             l1, = ax1.plot(self.sin_lats, -(self.S + self.dS)*self.dalb, color=colors[1], linestyle=linestyles[1])
             l2, = ax1.plot(self.sin_lats, -self.dL_pl, color=colors[2], linestyle=linestyles[2])
             l3, = ax1.plot(self.sin_lats, -self.dL_wv, color=colors[3], linestyle=linestyles[3])
-            l4, = ax1.plot(self.sin_lats, -self.dL_rh, color=colors[4], linestyle=linestyles[4])
+            # l4, = ax1.plot(self.sin_lats, -self.dL_rh, color=colors[4], linestyle=linestyles[4])
             l5, = ax1.plot(self.sin_lats, -self.dL_lr, color=colors[5], linestyle=linestyles[5])
-            l6, = ax1.plot(self.sin_lats, self.dS*(1 - self.alb) - (self.S + self.dS)*self.dalb - (self.dL_pl + self.dL_wv + self.dL_rh + self.dL_lr), color=colors[6], linestyle=linestyles[6])
+            # l6, = ax1.plot(self.sin_lats, self.dS*(1 - self.alb) - (self.S + self.dS)*self.dalb - (self.dL_pl + self.dL_wv + self.dL_rh + self.dL_lr), color=colors[6], linestyle=linestyles[6])
+            l6, = ax1.plot(self.sin_lats, self.dS*(1 - self.alb) - (self.S + self.dS)*self.dalb - (self.dL_pl + self.dL_wv + self.dL_lr), color=colors[6], linestyle=linestyles[6])
             l7, = ax1.plot(self.sin_lats, self.dS*(1 - self.alb) - (self.S + self.dS)*self.dalb - self.dL, color=colors[7], linestyle=linestyles[7])
             l8, = ax1.plot(np.sin(self.EFE), 0,  "or")
 
@@ -1134,9 +1060,10 @@ class MoistEnergyBalanceModel():
             ax2.plot(self.sin_lats, -10**-15 * self.dtrans_dalb, c=colors[1], ls=linestyles[1])
             ax2.plot(self.sin_lats, -10**-15 * self.dtrans_pl, c=colors[2], ls=linestyles[2])
             ax2.plot(self.sin_lats, -10**-15 * self.dtrans_wv, c=colors[3], ls=linestyles[3])
-            ax2.plot(self.sin_lats, -10**-15 * self.dtrans_rh, c=colors[4], ls=linestyles[4])
+            # ax2.plot(self.sin_lats, -10**-15 * self.dtrans_rh, c=colors[4], ls=linestyles[4])
             ax2.plot(self.sin_lats, -10**-15 * self.dtrans_lr, c=colors[5], ls=linestyles[5])
-            ax2.plot(self.sin_lats, 10**-15  * (self.dtrans_dS - self.dtrans_dalb - (self.dtrans_pl + self.dtrans_wv + self.dtrans_rh + self.dtrans_lr)), c=colors[6], ls=linestyles[6])
+            # ax2.plot(self.sin_lats, 10**-15  * (self.dtrans_dS - self.dtrans_dalb - (self.dtrans_pl + self.dtrans_wv + self.dtrans_rh + self.dtrans_lr)), c=colors[6], ls=linestyles[6])
+            ax2.plot(self.sin_lats, 10**-15  * (self.dtrans_dS - self.dtrans_dalb - (self.dtrans_pl + self.dtrans_wv + self.dtrans_lr)), c=colors[6], ls=linestyles[6])
             ax2.plot(self.sin_lats, 10**-15  * self.dtrans_total, c=colors[7], ls=linestyles[7])
             ax2.plot(np.sin(self.EFE), 0,  "or")
             
@@ -1148,8 +1075,10 @@ class MoistEnergyBalanceModel():
             ax1.annotate("(a)", (0.01, 0.92), xycoords="axes fraction")
             ax2.annotate("(b)", (0.01, 0.92), xycoords="axes fraction")
 
-            handles = (l0, l1, l2, l3, l4, l5, l6, l7, l8)
-            labels = ("$S'(1 - \\alpha)$", "$-(S + S')\\alpha'$", "$-L_{PL}'$", "$-L_{WV}'$", "$-L_{RH}'$", "$-L_{LR}'$", "Sum", "$NEI'$", "EFE")
+            # handles = (l0, l1, l2, l3, l4, l5, l6, l7, l8)
+            handles = (l0, l1, l2, l3, l5, l6, l7, l8)
+            # labels = ("$S'(1 - \\alpha)$", "$-(S + S')\\alpha'$", "$-L_{PL}'$", "$-L_{WV}'$", "$-L_{RH}'$", "$-L_{LR}'$", "Sum", "$NEI'$", "EFE")
+            labels = ("$S'(1 - \\alpha)$", "$-(S + S')\\alpha'$", "$-L_{PL}'$", "$-L_{WV}'$", "$-L_{LR}'$", "Sum", "$NEI'$", "EFE")
             f.legend(handles, labels, loc="upper center", ncol=9)
             
             plt.tight_layout()
@@ -1159,19 +1088,20 @@ class MoistEnergyBalanceModel():
             plt.savefig(fname)
             print("{} created.".format(fname))
             plt.close()
+
             # np.savez("differences_transports.npz", 
             #     EFE=self.EFE, 
             #     sin_lats=self.sin_lats, 
             #     dtrans_total=self.dtrans_total, 
             #     dtrans_pl=self.dtrans_pl, 
             #     dtrans_wv=self.dtrans_wv, 
-            #     dtrans_rh=self.dtrans_rh, 
+            #     # dtrans_rh=self.dtrans_rh, 
             #     dtrans_lr=self.dtrans_lr, 
             #     dtrans_dS=self.dtrans_dS, 
             #     dtrans_dalb=self.dtrans_dalb, 
             #     dL_pl=self.dL_pl, 
             #     dL_wv=self.dL_wv, 
-            #     dL_rh=self.dL_rh, 
+            #     # dL_rh=self.dL_rh, 
             #     dL_lr=self.dL_lr, 
             #     dL=self.dL,
             #     dS=self.dS,

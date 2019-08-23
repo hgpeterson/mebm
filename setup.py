@@ -12,8 +12,8 @@ setup(
     description='Moist energy balance model',
     long_description=readme,
     author='Henry Peterson',
-    author_email='hankpete97@gmail.com',
-    url='https://github.com/hankpete/EBM',
+    author_email='henrygrantpeterson@caltech.edu',
+    url='https://github.com/henrygrantpeterson/mebm',
     license=license,
     packages=['mebm'],
     include_package_data=True

@@ -9,7 +9,7 @@ mathtext.cal:          sans
 mathtext.it:           sans: italic
 # font.family:           serif
 # font.serif:            STIXGeneral
-# mathtext.fontset:      stix
+mathtext.fontset:      custom
 font.family:           sans-serif
 font.sans-serif:       TeX Gyre Heros
 # font.sans-serif:       Verdana
