@@ -5,7 +5,7 @@
 ## Installation
 First, get the repository on your computer with
 ```
-git clone https://github.com/henrygrantpeterson/mebm
+git clone https://github.com/hgpeterson/mebm
 ```
 and  
 ```
@@ -77,8 +77,8 @@ TBC...
 
 
 ## References
-Clark, S.K., Y. Ming, I.M. Held, P.J. Phillipps, 2018: The Role of the Water Vapor Feedback in the ITCZ Response to Hemispherically Asymmetric Forcings. *Journal of Climate*, 31:3659-3678.
+Clark, S.K., Y. Ming, I.M. Held, P.J. Phillipps, 2018: The Role of the Water Vapor Feedback in the ITCZ Response to Hemispherically Asymmetric Forcings. *Journal of Climate*. **31**, 3659–3678.
 
-Hwang, Y.T. and D.M.W. Frierson, 2010: Increasing Atmospheric Poleward Energy Transport with Global Warming. *Geo. Res. Lett.*, 37(24).
+Hwang, Y.T. and D.M.W. Frierson, 2010: Increasing Atmospheric Poleward Energy Transport with Global Warming. *Geo. Res. Lett.*. **37**, 1–5.
 
-Peterson, H. and W. Boos, 2019: Feedbacks and Eddy Diffusivity in an Energy Balance Model of Tropical Rainfall Shifts. *npj Climate and Atmospheric Science*, submitted.
+Peterson, H. and W. Boos, 2020: Feedbacks and Eddy Diffusivity in an Energy Balance Model of Tropical Rainfall Shifts. *npj Climate and Atmospheric Science*. **3**, 11.
